@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        // Set in Jenkins: Credentials ID for Firebase CI token, or use FIREBASE_TOKEN env var
-        // Generate token locally: firebase login:ci
+        DOCKER_IMAGE = 'docker-angular'
+        DOCKER_TAG = "${env.BUILD_NUMBER ?: 'latest'}"
         FIREBASE_TOKEN = credentials('FIREBASE_TOKEN')
     }
 
@@ -14,21 +14,23 @@ pipeline {
             }
         }
 
-        stage('Install') {
+        stage('Build with Docker') {
             steps {
-                sh 'npm install'
+                script {
+                    // Dockerfile runs: npm ci, npm run build (install + build inside image)
+                    docker.build("${DOCKER_IMAGE}:${DOCKER_TAG}")
+                }
             }
         }
 
-        stage('Test') {
+        stage('Extract build artifacts') {
             steps {
-                sh 'npm run test -- --no-watch --no-progress --browsers=ChromeHeadless'
-            }
-        }
-
-        stage('Build') {
-            steps {
-                sh 'npm run build'
+                sh '''
+                    mkdir -p dist
+                    docker create --name extract "${DOCKER_IMAGE}:${DOCKER_TAG}"
+                    docker cp extract:/usr/share/nginx/html dist/docker-angular
+                    docker rm extract
+                '''
             }
         }
 
@@ -46,7 +48,7 @@ pipeline {
             cleanWs()
         }
         success {
-            echo 'Build and deploy to Firebase completed successfully'
+            echo 'Build and deploy completed successfully'
         }
         failure {
             echo 'Pipeline failed'
