@@ -1,0 +1,11 @@
+# Production build for CI (Jenkins) – build Angular and output for Firebase deploy
+FROM node:16 AS builder
+WORKDIR '/app'
+COPY package.json .
+RUN npm ci --no-audit --no-fund
+COPY . .
+RUN npm run build -- --configuration production
+
+# Copy built app to a known path for artifact extraction (matches angular.json outputPath)
+FROM scratch
+COPY --from=builder /app/dist/docker-angular /

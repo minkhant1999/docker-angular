@@ -1,9 +1,12 @@
 services:
-  app:
+  web:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: docker-angular-app
     ports:
-      - "8080:80"
-    restart: unless-stopped
+      - "4500:4200"
+    volumes:
+      - /app/node_modules
+      - .:/app
+
+
